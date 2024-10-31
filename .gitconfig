@@ -1,0 +1,66 @@
+[user]
+    name = Tomas Gavenciak
+    email = gavento@gmail.com
+
+[color]
+    branch = auto
+    diff = auto
+    status = auto
+
+[color "branch"]
+    current = red reverse
+    local = blue
+    remote = green
+
+[color "diff"]
+    meta = yellow
+    frag = magenta
+    old = red reverse
+    new = green reverse
+    plain = white
+
+[color "status"]
+    added = yellow
+    changed = green
+    untracked = cyan
+
+[diff]
+    mnemonicprefix = true
+
+[alias]
+    co = checkout
+    st = status
+    #ll = log --all --decorate --graph --pretty=format:'%C(auto)%h%Creset %C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)[%an]%Creset' --abbrev-commit --date=relative
+    ll = log --branches --decorate --graph --pretty=format:'%C(auto)%h%Creset %C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)[%an]%Creset' --abbrev-commit --date=relative
+    wd = diff --color-words
+    ci = commit
+    br = branch
+    l = log --oneline --graph --all --decorate
+
+[merge]
+    log = true
+
+[push]
+    default = simple
+
+[rebase]
+    autosquash = true
+
+# for $deity's sake, check that anything we're getting is complete and sane on a regular basis 
+[transfer]
+    fsckobjects = true
+[fetch]
+    fsckobjects = true
+[receive]
+    fsckObjects = true
+[fsck]
+    badTimezone = ignore
+[pull]
+    ff = only
+[init]
+    defaultBranch = main
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
