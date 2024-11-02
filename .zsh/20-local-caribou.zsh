@@ -1,7 +1,7 @@
 # Local settings for caribou
 
 if [[ $(hostname) == "caribou" ]]; then
-    alias bkup="sudo /root/restic-backup/bin/resticprofile -c /root/restic-backup/profiles.yaml $@"
+    alias bkup="sudo /root/restic-backup/bin/resticprofile -c /root/restic-backup/profiles.yaml"
     alias code="code-insiders"
 
     # Local settings
