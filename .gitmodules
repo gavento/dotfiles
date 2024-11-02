@@ -7,3 +7,6 @@
 [submodule ".zsh/submodules/zsh-autocomplete"]
 	path = .zsh/submodules/zsh-autocomplete
 	url = https://github.com/marlonrichert/zsh-autocomplete
+[submodule ".zsh/submodules/fzf-tab"]
+	path = .zsh/submodules/fzf-tab
+	url = https://github.com/Aloxaf/fzf-tab
