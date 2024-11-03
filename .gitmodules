@@ -10,3 +10,6 @@
 [submodule ".zsh/submodules/fzf-tab"]
 	path = .zsh/submodules/fzf-tab
 	url = https://github.com/Aloxaf/fzf-tab
+[submodule ".zsh/submodules/jq-zsh-plugin"]
+	path = .zsh/submodules/jq-zsh-plugin
+	url = https://github.com/reegnz/jq-zsh-plugin
