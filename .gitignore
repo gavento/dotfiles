@@ -1,10 +1,9 @@
 /proj
-/download
 /Download
-/tmp
-/games
+/Games
+/Desktop
 /.dotfiles
-
 /priv
 /.priv
-
+!/.ssh/config
+/.ssh/*
