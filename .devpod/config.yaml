@@ -5,7 +5,7 @@ contexts:
     options:
       DOTFILES_SCRIPT:
         userProvided: true
-        value: .local/bin/dotfiles-install.sh
+        value: .local/bin/dotfiles-install-via-apt.sh
       DOTFILES_URL:
         userProvided: true
         value: https://github.com/gavento/dotfiles
