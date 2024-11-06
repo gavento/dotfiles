@@ -32,7 +32,8 @@ install_deps() {
 }
 
 # First, install some basic packages
-install_deps "aptitude sudo zsh git curl wget yadm nano htop tmux mosh jq lsd bat fzf ripgrep fd-find eza zstd yq neofetch tree"
+install_deps "aptitude sudo zsh git curl wget yadm nano htop tmux mosh jq bat fzf ripgrep fd-find zstd neofetch tree"
+# Multiverse: lsd eza yq
 
 # Change shell to zsh
 if [ "$SHELL" != "/bin/zsh" ]; then
