@@ -1,9 +1,0 @@
-[submodule ".zsh/submodules/zsh-autosuggestions"]
-	path = .zsh/submodules/zsh-autosuggestions
-	url = https://github.com/zsh-users/zsh-autosuggestions
-	shallow = true
-[submodule ".zsh/submodules/zsh-syntax-highlighting"]
-	path = .zsh/submodules/zsh-syntax-highlighting
-	url = https://github.com/zsh-users/zsh-syntax-highlighting
-	shallow = true
-
