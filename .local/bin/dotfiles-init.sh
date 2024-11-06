@@ -37,7 +37,7 @@ install_deps "aptitude sudo zsh git curl wget yadm nano htop tmux mosh jq bat fz
 
 # Change shell to zsh
 if [ "$SHELL" != "/bin/zsh" ]; then
-  chsh -s /bin/zsh
+  sudo chsh -s $(which zsh) $USER
 fi
 
 # If this is a fresh install, initialize yadm
