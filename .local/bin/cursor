@@ -1,0 +1,17 @@
+#!/bin/zsh
+
+SEARCH_DIR="${HOME}/.local/binaries"
+latest_appimage=($SEARCH_DIR/cursor-*.AppImage(om[1]))
+
+# Check if any AppImage was found
+if [[ ! -f "$latest_appimage" ]]; then
+    echo "Error: No cursor AppImage found in ${SEARCH_DIR}" >&2
+    exit 1
+fi
+
+# Make sure the AppImage is executable
+if [[ ! -x "$latest_appimage" ]]; then
+    chmod +x "$latest_appimage"
+fi
+exec "$latest_appimage" "$@"
+

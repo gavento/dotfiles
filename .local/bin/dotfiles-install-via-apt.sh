@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e -o pipefail
 
-# A function to install a list of packages if they are not already installed, via apt
-# Usage: install_deps "package1 package2 package3"
 install_deps() {
   local packages="$1"
   local missing_packages=""
-  # Verify this is a debian-based system
+
+  # Verify this is a apt-based system
   if ! command -v apt-get > /dev/null; then
     echo "This script is only for Debian-based systems"
     exit 1
@@ -32,7 +31,8 @@ install_deps() {
 }
 
 # First, install some basic packages
-install_deps "aptitude sudo zsh git curl wget yadm nano htop tmux mosh jq bat fzf ripgrep fd-find zstd neofetch tree"
+install_deps "sudo zsh git curl nano htop tmux mosh yadm"
+# Bonus packages: jq bat ripgrep fd-find zstd neofetch tree
 # Multiverse: lsd eza yq
 
 # Change shell to zsh
@@ -45,3 +45,5 @@ if [ ! -d $HOME/.local/share/yadm ]; then
   yadm clone https://github.com/gavento/dotfiles 
 fi
 
+# Install a recent fzf
+$HOME/.local/bin/dotfiles-install-fzf.sh
