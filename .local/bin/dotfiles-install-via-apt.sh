@@ -36,7 +36,7 @@ install_deps "sudo zsh git curl nano htop tmux mosh yadm"
 # Multiverse: lsd eza yq
 
 # Change shell to zsh
-if [ "$SHELL" != "/bin/zsh" ]; then
+if [ "$SHELL" != "$(which zsh)" ]; then
   sudo chsh -s $(which zsh) $USER
 fi
 
