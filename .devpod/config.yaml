@@ -1,0 +1,49 @@
+contexts:
+  default:
+    defaultIde: cursor
+    defaultProvider: docker
+    options:
+      DOTFILES_SCRIPT:
+        userProvided: true
+        value: .local/bin/dotfiles-install.sh
+      DOTFILES_URL:
+        userProvided: true
+        value: https://github.com/gavento/dotfiles
+      GIT_SSH_SIGNATURE_FORWARDING:
+        userProvided: true
+        value: "false"
+      SSH_ADD_PRIVATE_KEYS:
+        userProvided: true
+        value: "false"
+      SSH_AGENT_FORWARDING:
+        userProvided: true
+        value: "false"
+      SSH_CONFIG_PATH:
+        userProvided: true
+        value: /home/gavento/.devpod/ssh-config
+      SSH_INJECT_DOCKER_CREDENTIALS:
+        userProvided: true
+        value: "false"
+      SSH_INJECT_GIT_CREDENTIALS:
+        userProvided: true
+        value: "false"
+      TELEMETRY:
+        userProvided: true
+        value: "false"
+    providers:
+      docker:
+        creationTimestamp: "2024-08-06T18:57:41Z"
+        initialized: true
+        options:
+          DOCKER_BUILDER:
+            userProvided: true
+          DOCKER_HOST:
+            userProvided: true
+          DOCKER_PATH:
+            userProvided: true
+            value: docker
+          INACTIVITY_TIMEOUT:
+            userProvided: true
+            value: 12h
+        singleMachine: true
+defaultContext: default
