@@ -32,6 +32,15 @@ setopt hist_find_no_dups
 export VISUAL=nano
 export EDITOR=nano
 
+### Zim config
+
+export ZIM_HOME=$HOME/.config/zimfw
+zstyle ':zim:zmodule' use 'degit'
+zstyle ':zim' 'disable-version-check' 'true'
+# Zim is only ever called manually (no automatic initialization -- everything should be in the repo already)
+alias zim-fw="source $ZIM_HOME/zimfw.zsh"
+# Plugins are configured and loaded later
+
 ### ZSH configuration
 
 # ignore case

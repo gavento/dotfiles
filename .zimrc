@@ -1,0 +1,7 @@
+zmodule zsh-users/zsh-autosuggestions
+zmodule zimfw/fzf
+zmodule agkozak/zsh-z
+zmodule zimfw/archive
+# These two need to be last
+zmodule zimfw/completion
+zmodule zsh-users/zsh-syntax-highlighting
