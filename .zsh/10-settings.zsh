@@ -5,11 +5,6 @@
 
 PATH=$HOME/.local/bin:$PATH
 
-### Completions
-
-autoload -U compinit && compinit
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-
 ### A simple prompt
 
 PROMPT='%F{green}%n@%m%f %F{blue}%1~%f %# '
