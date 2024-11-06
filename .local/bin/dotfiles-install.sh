@@ -7,13 +7,13 @@ install_deps() {
   local packages="$1"
   local missing_packages=""
   # Verify this is a debian-based system
-  if ! command -v apt > /dev/null; then
+  if ! command -v apt-get > /dev/null; then
     echo "This script is only for Debian-based systems"
     exit 1
   fi
 
   for package in $packages; do
-    if ! dpkg -l | grep -q $package; then
+    if ! dpkg-query -W $package > /dev/null; then
       missing_packages="$missing_packages $package"
     fi
   done
@@ -21,9 +21,9 @@ install_deps() {
   if [ -n "$missing_packages" ]; then
     # sudo only if not root
     if [ $EUID -ne 0 ]; then
-      APT_CMD="sudo apt"
+      APT_CMD="sudo apt-get"
     else
-      APT_CMD="apt"
+      APT_CMD="apt-get"
     fi
     echo "Installing missing packages: $missing_packages"
     $APT_CMD update
