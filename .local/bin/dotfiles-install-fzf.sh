@@ -2,6 +2,7 @@
 set -e -u -o pipefail
 
 TGT_PATH=$HOME/.local/bin/fzf
+mkdir -p $HOME/.local/bin
 
 if ! [[ -f $TGT_PATH ]]; then
     echo "$TGT_PATH not found, installing"
