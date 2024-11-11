@@ -47,8 +47,13 @@ fi
 
 # If this is a fresh install, initialize yadm
 if [ ! -d $HOME/.local/share/yadm ]; then
+  cd $HOME
   yadm clone https://github.com/gavento/dotfiles 
+  pwd
+  echo $HOME
+  ls -l $HOME/.local/
+  ls -l $HOME/.local/bin/
 fi
 
 # Install a recent fzf
-$HOME/.local/bin/dotfiles-install-fzf.sh
+$HOME/.local/bin/dotfiles-install-fzf.sh || true
