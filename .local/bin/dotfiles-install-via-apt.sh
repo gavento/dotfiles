@@ -49,10 +49,7 @@ fi
 if [ ! -d $HOME/.local/share/yadm ]; then
   cd $HOME
   yadm clone https://github.com/gavento/dotfiles 
-  pwd
-  echo $HOME
-  ls -l $HOME/.local/
-  ls -l $HOME/.local/bin/
+  yadm checkout .
 fi
 
 # Install a recent fzf
