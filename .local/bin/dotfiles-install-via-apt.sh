@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e -o pipefail
 
+# Installs yadm and other tools via apt if not present (system/apt)
+# Sets shell to zsh
+# Clones dotfiles with YADM if not present already
+# Installs a newer fzf locally if not present
+
 install_deps() {
   local packages="$1"
   local missing_packages=""
