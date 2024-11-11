@@ -20,11 +20,8 @@ PATH=$HOME/.local/bin:$PATH
 # If this is a fresh install, initialize yadm
 if [ ! -d $HOME/.local/share/yadm ]; then
   cd $HOME
-  yadm clone https://github.com/gavento/dotfiles
-  pwd
-  echo $HOME
-  ls -l $HOME/.local/
-  ls -l $HOME/.local/bin/
+  yadm clone https://github.com/gavento/dotfiles 
+  yadm checkout .
 fi
 
 $HOME/.local/bin/dotfiles-install-fzf.sh || true
