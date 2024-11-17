@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e -u -o pipefail
+
+# Check staged files for secrets
+for f in `yadm diff --name-only --cached`; do
+  if [[ -e "$f" ]] then
+    echo Checking "$f" for secrets ...
+    docker run -i ghcr.io/gitleaks/gitleaks:latest stdin -l error --no-banner < $f
+  fi
+done
