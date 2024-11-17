@@ -1,4 +1,5 @@
 # Completion config
+mkdir -p ~/.cache/zsh
 zstyle ':zim:completion' dumpfile ~/.cache/zsh/zsh_dumpfile
 zstyle ':completion::complete:*' cache-path ~/.cache/zsh/zcompcache
 
