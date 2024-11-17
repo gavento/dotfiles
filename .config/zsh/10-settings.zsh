@@ -9,6 +9,16 @@
 
 PROMPT='%F{green}%n@%m%f %F{blue}%1~%f %# '
 
+### My own functions
+
+local functions_dir=$HOME/.config/zsh/functions
+FPATH=$functions_dir:$HOME/.local/share/zsh/functions:$FPATH
+
+local functions_list=($functions_dir/^[._]*(N:t))
+if [[ -n $functions_list ]] then
+    autoload -U $functions_list
+fi
+
 ### History configuration
 
 HISTFILE=~/.zsh_history
@@ -59,8 +69,3 @@ alias zim-fw="source $ZIM_HOME/zimfw.zsh"
 # # switch group using `<` and `>`
 # zstyle ':fzf-tab:*' switch-group '<' '>'
 
-# Import files from functions/ dir (relative to this file)
-
-for file in $( find $ZSH_DIR/functions/ -maxdepth 1 -name '*.zsh' ); do
-  source $file
-done
