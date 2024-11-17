@@ -1,0 +1,178 @@
+#!/bin/bash
+set -e -u -o pipefail
+
+DOTFILE_URL=https://github.com/gavento/dotfiles/
+
+install_from_archive() {
+    local URL="$1"
+    local VERSION="$2"
+    local ARCHIVE_HASH="$3"
+    shift 3
+    
+    # First pair is used for version checking
+    local CHECK_SRC="$1"
+    local CHECK_TGT="$2"
+    
+    if ! [[ -f "$HOME/$CHECK_TGT" ]] || ! "$HOME/$CHECK_TGT" --version | grep -q "\<$VERSION\>"; then
+        if ! [[ -f "$HOME/$CHECK_TGT" ]]; then
+            echo "Installing $CHECK_TGT $VERSION ..."
+        else
+            echo "Updating $CHECK_TGT to $VERSION (from `"$HOME/$CHECK_TGT" --version`) ..."
+        fi
+        local tmpdir=$(mktemp -d)
+        local archive="$tmpdir/archive.tar.gz"
+        
+        # Download and verify archive
+        curl -fL "$URL" -o "$archive"
+        echo "$ARCHIVE_HASH $archive" | sha256sum -c --quiet || \
+            ( echo "Wrong archive hash in $tmpdir!"; false )
+            
+        # Process all source/target pairs
+        while [[ $# -ge 2 ]]; do
+            local src="$1"
+            local tgt="$2"
+            shift 2
+            echo "  Extracting $src to $HOME/$tgt ..."
+            
+            mkdir -p "$(dirname "$HOME/$tgt")"
+            tar -xzf "$archive" -C "$HOME" --transform="s|$src|$tgt|" "$src"
+        done
+        
+        rm -rf "$tmpdir"
+    fi
+}
+
+install_fzf() {
+    local VERSION="0.56.0"
+    install_from_archive \
+        "https://github.com/junegunn/fzf/releases/download/v${VERSION}/fzf-${VERSION}-linux_amd64.tar.gz" \
+        "$VERSION" \
+        "7afad5dcc3e3a7cbaef577ec02c4dd90280e283bc16da99809498f75a5f18080" \
+        "fzf" ".local/bin/fzf"
+}
+
+install_uv() {
+    local VERSION="0.5.1"
+    install_from_archive \
+        "https://github.com/astral-sh/uv/releases/download/${VERSION}/uv-x86_64-unknown-linux-musl.tar.gz" \
+        "$VERSION" \
+        "c446a98876ed86c810a80621a43e2378c35f39794020f8de99da72b003b17dd5" \
+        "uv-x86_64-unknown-linux-musl/uv" ".local/bin/uv" \
+        "uv-x86_64-unknown-linux-musl/uvx" ".local/bin/uvx"
+}
+
+install_yadm() {
+    local VERSION="3.3.0"
+    install_from_archive \
+        "https://github.com/yadm-dev/yadm/archive/refs/tags/${VERSION}.tar.gz" \
+        "$VERSION" \
+        "a977836ee874fece3d69b5a8f7436e6ce4e6bf8d2520f8517c128281cc6b101d" \
+        "yadm-${VERSION}/yadm" ".local/bin/yadm" \
+        "yadm-${VERSION}/yadm.1" ".local/share/man/man1/yadm.1" \
+        "yadm-${VERSION}/completion/zsh/_yadm" ".local/share/zsh/functions/_yadm"
+}
+
+install_via_apt() {
+  local packages="$1"
+  local missing_packages=""
+
+  # Verify this is a apt-based system
+  if ! command -v apt-get > /dev/null; then
+    echo "This script is only for Debian-based systems"
+    exit 1
+  fi
+
+  for package in $packages; do
+    if ! dpkg-query -W $package > /dev/null; then
+      missing_packages="$missing_packages $package"
+    fi
+  done
+  
+  if [ -n "$missing_packages" ]; then
+    # sudo only if not root
+    if [ $EUID -ne 0 ]; then
+      APT_CMD="sudo apt-get"
+    else
+      APT_CMD="apt-get"
+    fi
+    echo "Installing missing packages: $missing_packages"
+    $APT_CMD update
+    $APT_CMD install -y $missing_packages
+  fi
+}
+
+install_apt_default() {
+    install_via_apt zsh sudo curl git tmux htop mosh
+}
+
+install_all() {
+    install_fzf
+    install_uv
+    install_yadm
+}
+
+bootstrap() {
+    YADM=$HOME/.local/bin/yadm
+    YADM_REPO=$HOME/.local/share/yadm/repo.git
+    if [[ -d "$YADM_REPO" ]]; then
+        echo "YADM repository already exists at $YADM_REPO. Use yadm to manage it."
+        exit 1
+    else
+        echo "Cloning dotfiles repository $DOTFILE_URL via YADM ..."
+        cd $HOME
+        $YADM clone $DOTFILE_URL
+        $YADM checkout .
+    fi
+}
+
+show_help() {
+    echo "Usage: $0 <command>"
+    echo "Commands:"
+    echo "  install-fzf   Install or update fzf tool locally"
+    echo "  install-uv    Install or update uv tool locally"
+    echo "  install-yadm  Install or update yadm tool locally"
+    echo "  install-all   Install or update all local tools"
+    echo "  bootstrap     Install or update all local tools; install dotfiles (if not present already)"
+    echo "  install-apt   Install default packages via apt-get (needs sudo or root)"
+    echo "  bootstrap-apt Install default packages via apt-get; then do 'bootstrap'"
+    echo "  help          Show this help message"
+}
+
+if [[ $# -eq 0 ]]; then
+    show_help
+    exit 1
+fi
+
+case "$1" in
+    install-fzf)
+        install_fzf
+        ;;
+    install-uv)
+        install_uv
+        ;;
+    install-yadm)
+        install_yadm
+        ;;
+    install-all)
+        install_all
+        ;;
+    bootstrap)
+        install_all
+        bootstrap
+        ;;
+    install-apt)
+        install_apt_default
+        ;;
+    bootstrap-apt)
+        install_apt_default
+        bootstrap
+        ;;    
+    help)
+        show_help
+        ;;
+    *)
+        echo "Unknown command: $1"
+        show_help
+        exit 1
+        ;;
+esac
