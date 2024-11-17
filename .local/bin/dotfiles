@@ -105,7 +105,7 @@ install_apt_default() {
     install_via_apt zsh sudo curl git tmux htop mosh
 }
 
-install_all() {
+install_local() {
     install_fzf
     install_uv
     install_yadm
@@ -128,14 +128,14 @@ bootstrap() {
 show_help() {
     echo "Usage: $0 <command>"
     echo "Commands:"
-    echo "  install-fzf   Install or update fzf tool locally"
-    echo "  install-uv    Install or update uv tool locally"
-    echo "  install-yadm  Install or update yadm tool locally"
-    echo "  install-all   Install or update all local tools"
-    echo "  bootstrap     Install or update all local tools; install dotfiles (if not present already)"
-    echo "  install-apt   Install default packages via apt-get (needs sudo or root)"
-    echo "  bootstrap-apt Install default packages via apt-get; then do 'bootstrap'"
-    echo "  help          Show this help message"
+    echo "  install-fzf     Install or update fzf tool locally"
+    echo "  install-uv      Install or update uv tool locally"
+    echo "  install-yadm    Install or update yadm tool locally"
+    echo "  install-local   Install or update all local tools"
+    echo "  bootstrap       Install or update all local tools; install dotfiles (if not present already)"
+    echo "  install-apt     Install default packages via apt-get (needs sudo or root)"
+    echo "  bootstrap-apt   Install default packages via apt-get; then do 'bootstrap'"
+    echo "  help            Show this help message"
 }
 
 if [[ $# -eq 0 ]]; then
@@ -153,11 +153,11 @@ case "$1" in
     install-yadm)
         install_yadm
         ;;
-    install-all)
-        install_all
+    install-local)
+        install_local
         ;;
-    bootstrap)
-        install_all
+    bootstrap) 
+        install_local
         bootstrap
         ;;
     install-apt)
@@ -165,6 +165,7 @@ case "$1" in
         ;;
     bootstrap-apt)
         install_apt_default
+        install_local
         bootstrap
         ;;    
     help)
