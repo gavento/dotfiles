@@ -3,12 +3,9 @@ contexts:
     defaultIde: cursor
     defaultProvider: docker
     options:
-      DOTFILES_SCRIPT:
-        userProvided: true
-        value: .local/bin/dotfiles-install-via-apt.sh
       DOTFILES_URL:
         userProvided: true
-        value: https://github.com/gavento/dotfiles
+        value: https://github.com/gavento/dotfiles-bootstrap
       GIT_SSH_SIGNATURE_FORWARDING:
         userProvided: true
         value: "false"
