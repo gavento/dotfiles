@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -u -o pipefail
 
-DOTFILE_URL=https://github.com/gavento/dotfiles/
+DOTFILE_URL=https://github.com/gavento/dotfiles
 
 install_from_archive() {
     local URL="$1"
@@ -17,7 +17,7 @@ install_from_archive() {
         if ! [[ -f "$HOME/$CHECK_TGT" ]]; then
             echo "Installing $CHECK_TGT $VERSION ..."
         else
-            echo "Updating $CHECK_TGT to $VERSION (from `"$HOME/$CHECK_TGT" --version`) ..."
+            echo "Updating $CHECK_TGT to $VERSION (from $("$HOME/$CHECK_TGT" --version)) ..."
         fi
         local tmpdir=$(mktemp -d)
         local archive="$tmpdir/archive.tar.gz"
@@ -72,43 +72,53 @@ install_yadm() {
         "yadm-${VERSION}/completion/zsh/_yadm" ".local/share/zsh/functions/_yadm"
 }
 
-install_via_apt() {
-  local packages="$@"
-  local missing_packages=""
-
-  # Verify this is a apt-based system
-  if ! command -v apt-get > /dev/null; then
-    echo "This script is only for Debian-based systems"
-    exit 1
-  fi
-
-  for package in $packages; do
-    if ! dpkg-query -W $package > /dev/null; then
-      missing_packages="$missing_packages $package"
-    fi
-  done
-  
-  if [ -n "$missing_packages" ]; then
-    # sudo only if not root
-    if [ $EUID -ne 0 ]; then
-      APT_CMD="sudo apt-get"
-    else
-      APT_CMD="apt-get"
-    fi
-    echo "Installing missing packages: $missing_packages"
-    $APT_CMD update
-    $APT_CMD install -y $missing_packages
-  fi
-}
-
-install_apt_default() {
-    install_via_apt zsh sudo curl git tmux htop nano vim mc
-}
-
-install_local() {
+install_default_commands_local() {
     install_fzf
     install_uv
     install_yadm
+}
+
+install_commands_system() {
+    local packages="$@"
+    local missing_packages=""
+
+    # Check what's missing
+    for package in $packages; do
+        if ! command -v "$package" > /dev/null; then
+            missing_packages="$missing_packages $package"
+        fi
+    done
+
+    # Install if anything is missing
+    if [ -n "$missing_packages" ]; then
+        # Check for sudo if not root
+        local SUDO=""
+        if [ "$EUID" -ne 0 ]; then
+            if ! command -v sudo > /dev/null; then
+                echo "Neither root access nor sudo available"
+                exit 1
+            fi
+            SUDO="sudo"
+        fi
+        # Determine package manager
+        if command -v apt-get > /dev/null; then
+            $SUDO apt-get update
+            $SUDO apt-get install -y $missing_packages
+        elif command -v pacman > /dev/null; then
+            $SUDO pacman -Sy --noconfirm $missing_packages
+        elif command -v dnf > /dev/null; then
+            $SUDO dnf install -y $missing_packages
+        elif command -v yum > /dev/null; then
+            $SUDO yum install -y $missing_packages
+        else
+            echo "No supported package manager found (apt, pacman, dnf, or yum)"
+            exit 1
+        fi
+    fi
+}
+
+install_default_commands_system() {
+    install_commands_system zsh sudo curl git tmux htop nano vim mc
 }
 
 bootstrap() {
@@ -128,14 +138,14 @@ bootstrap() {
 show_help() {
     echo "Usage: $0 <command>"
     echo "Commands:"
-    echo "  install-fzf     Install or update fzf tool locally"
-    echo "  install-uv      Install or update uv tool locally"
-    echo "  install-yadm    Install or update yadm tool locally"
-    echo "  install-local   Install or update all local tools"
-    echo "  bootstrap       Install or update all local tools; install dotfiles (if not present already)"
-    echo "  install-apt     Install default packages via apt-get (needs sudo or root)"
-    echo "  bootstrap-apt   Install default packages via apt-get; then do 'bootstrap'"
-    echo "  help            Show this help message"
+    echo "  install-fzf       Install or update fzf tool locally"
+    echo "  install-uv        Install or update uv tool locally"
+    echo "  install-yadm      Install or update yadm tool locally"
+    echo "  install-local     Install or update all local tools (above)"
+    echo "  bootstrap         Install or update all local tools; then install dotfiles (if not present already)"
+    echo "  install-system    Install default packages via system packager (needs sudo or root)"
+    echo "  bootstrap-system  Install default packages via system packager; then do 'bootstrap'"
+    echo "  help              Show this help message"
 }
 
 if [[ $# -eq 0 ]]; then
@@ -154,18 +164,18 @@ case "$1" in
         install_yadm
         ;;
     install-local)
-        install_local
+        install_default_commands_local
         ;;
     bootstrap) 
-        install_local
+        install_default_commands_local
         bootstrap
         ;;
-    install-apt)
-        install_apt_default
+    install-system)
+        install_default_commands_system
         ;;
-    bootstrap-apt)
-        install_apt_default
-        install_local
+    bootstrap-system)
+        install_default_commands_system
+        install_default_commands_local
         bootstrap
         ;;    
     help)
