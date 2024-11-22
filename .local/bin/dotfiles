@@ -102,7 +102,7 @@ install_via_apt() {
 }
 
 install_apt_default() {
-    install_via_apt zsh sudo curl git tmux htop mosh
+    install_via_apt zsh sudo curl git tmux htop nano vim mc
 }
 
 install_local() {
