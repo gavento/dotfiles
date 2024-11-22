@@ -21,7 +21,7 @@ curl -fL https://raw.githubusercontent.com/gavento/dotfiles/refs/heads/main/.loc
 Requires `curl` and `apt-get`. Installs `zsh`, `git`, and few other useful tools via apt, then runs the local bootstrap.
 
 ```
-curl -fL https://raw.githubusercontent.com/gavento/dotfiles/refs/heads/main/.local/bin/dotfiles | bash -s - bootstrap-apt
+curl -fL https://raw.githubusercontent.com/gavento/dotfiles/refs/heads/main/.local/bin/dotfiles | bash -s - bootstrap-system
 ```
 
 ### Devpod
