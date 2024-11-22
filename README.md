@@ -1,6 +1,6 @@
 # gavento's dotfiles
 
-Dotfiles for dev-containers and remote servers; mostly config for zsh, git, tmux, etc.
+Dotfiles for dev-containers and remote servers; mostly my configs for zsh, git, tmux, etc.
 
 Managed with `yadm` (downloaded or distro-provided), ZSH modules managed by `zimfw` (in-tree), with all modlues kept in-tree and updated only explicitly. 
 
@@ -26,16 +26,15 @@ curl -fL https://raw.githubusercontent.com/gavento/dotfiles/refs/heads/main/.loc
 
 ### Devpod
 
-TODO: Update
+Devpod first clones the repo before calling `./bootstrap.sh` or similar, so that script is located in the `gavento/dotfiles-bootstrap` repo.
 
-Explicitly:
+Calling devpod explicitly:
 ```sh
-devpod up . --dotfiles https://github.com/gavento/dotfiles --dotfiles-script .local/bin/dotfiles-install-via-apt.sh
+devpod up . --dotfiles https://github.com/gavento/dotfiles-bootstrap
 ```
 
 Automated (included in dotfile devpod config):
 ```
-devpod context set-options -o DOTFILES_URL=https://github.com/gavento/dotfiles                                                                                                              
-devpod context set-options -o DOTFILES_SCRIPT=.local/bin/dotfiles-install-via-apt.sh
+devpod context set-options -o DOTFILES_URL=https://github.com/gavento/dotfiles-bootstrap
 ```
 
