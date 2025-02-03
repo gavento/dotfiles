@@ -7,7 +7,7 @@
 
 ### A simple prompt
 
-PROMPT='%F{green}%n@%m%f %F{blue}%1~%f %# '
+PROMPT='%F{yellow}%n@%m%f %F{blue}%1~%f %# '
 
 ### My own functions
 
