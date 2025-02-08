@@ -7,7 +7,25 @@
 
 ### A simple prompt
 
-PROMPT='%F{yellow}%n@%m%f %F{blue}%1~%f %# '
+# Configure these variables to your liking
+PROMPT_PATH_DEPTH=4      # When to start truncating
+PROMPT_SHOW_COMPONENTS=3 # How many components to show after truncation
+PROMPT_USER_HOST_COLOR="yellow"
+
+# Build the prompt
+setopt PROMPT_SUBST  # Enable prompt substitution
+
+# Function to get the path with smart home directory handling
+_get_smart_path() {
+    if [[ $PWD == $HOME* ]]; then
+        echo "%($(($PROMPT_PATH_DEPTH+1))"'~|.../%'"$PROMPT_SHOW_COMPONENTS"'~|%~)'
+    else
+        echo "%($PROMPT_PATH_DEPTH"'~|.../%'"$PROMPT_SHOW_COMPONENTS"'~|%~)'
+    fi
+}
+
+# Build the main prompt
+PROMPT='%F{$PROMPT_USER_HOST_COLOR}%n@%m%f %F{blue}$(_get_smart_path)%f %(?.%f.%F{red})%#%f '
 
 ### My own functions
 
