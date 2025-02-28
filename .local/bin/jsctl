@@ -6,6 +6,17 @@ set -e
 # jsctl - Manage systemd services with live log display
 # Usage: jsctl COMMAND service-name [additional args]
 
+# Setup proper cleanup on exit
+JOURNAL_PID=""
+cleanup() {
+  # Kill the journalctl process if it's running
+  if [[ -n "$JOURNAL_PID" && -e /proc/$JOURNAL_PID ]]; then
+    kill $JOURNAL_PID 2>/dev/null || true
+  fi
+}
+# Register cleanup to happen on script exit or when Ctrl+C is pressed
+trap cleanup EXIT INT TERM
+
 # Check if at least two arguments were provided
 if [[ $# -lt 2 ]]; then
     echo "Usage: jsctl COMMAND service-name [additional args]"
@@ -33,10 +44,10 @@ need_sudo() {
 SUDO=$(need_sudo)
 
 # Start journalctl in a separate process group with colors enabled
-$SUDO journalctl -fu $SERVICE --no-hostname -o with-unit --no-full &
+$SUDO journalctl -fu $SERVICE --since "$(date +%T)" --utc --no-hostname -o with-unit --no-full &
 JOURNAL_PID=$!
 # Give journalctl a moment to start
-sleep 0.3
+sleep 0.5
 
 # Execute the systemctl command
 echo -e "${YELLOW}Executing: systemctl $COMMAND $SERVICE $OTHER_ARGS${RESET}"
@@ -46,5 +57,5 @@ $SUDO systemctl $COMMAND $SERVICE $OTHER_ARGS
 echo -e "${YELLOW}Command completed. Press Ctrl+C to stop log monitoring.${RESET}"
 
 # Wait for the journalctl process to complete or be interrupted
-# The '|| true' ensures set -e doesn't exit when Ctrl+C is pressed
+# When Ctrl+C is pressed, the trap will handle cleanup
 wait $JOURNAL_PID 2>/dev/null || true
