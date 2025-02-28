@@ -1,0 +1,50 @@
+#!/usr/bin/env zsh
+
+# Exit on error
+set -e
+
+# jsctl - Manage systemd services with live log display
+# Usage: jsctl COMMAND service-name [additional args]
+
+# Check if at least two arguments were provided
+if [[ $# -lt 2 ]]; then
+    echo "Usage: jsctl COMMAND service-name [additional args]"
+    echo "Example: jsctl restart nginx"
+    exit 1
+fi
+
+# Parse arguments
+COMMAND=$1
+SERVICE=$2
+shift 2  # Remove the first two arguments
+OTHER_ARGS="$@"  # Any remaining arguments
+
+# Colors
+YELLOW='\033[0;33m'
+RESET='\033[0m'
+
+# Check if we need sudo
+need_sudo() {
+    if [[ $(id -u) -ne 0 ]]; then
+        echo "sudo"
+    fi
+}
+
+SUDO=$(need_sudo)
+
+# Start journalctl in a separate process group with colors enabled
+$SUDO journalctl -fu $SERVICE --no-hostname -o with-unit --no-full &
+JOURNAL_PID=$!
+# Give journalctl a moment to start
+sleep 0.3
+
+# Execute the systemctl command
+echo -e "${YELLOW}Executing: systemctl $COMMAND $SERVICE $OTHER_ARGS${RESET}"
+$SUDO systemctl $COMMAND $SERVICE $OTHER_ARGS
+
+# Let user know how to exit
+echo -e "${YELLOW}Command completed. Press Ctrl+C to stop log monitoring.${RESET}"
+
+# Wait for the journalctl process to complete or be interrupted
+# The '|| true' ensures set -e doesn't exit when Ctrl+C is pressed
+wait $JOURNAL_PID 2>/dev/null || true
