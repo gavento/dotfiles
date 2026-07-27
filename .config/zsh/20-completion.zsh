@@ -19,6 +19,9 @@ zstyle ':completion::complete:*' cache-path ~/.cache/zsh/zcompcache
 unsetopt auto_menu
 unsetopt menu_complete
 zstyle ':completion:*' menu no
+# List immediately even when a prefix was just inserted -- by default zsh
+# stays silent on the TAB that inserts and only lists on the next one.
+unsetopt list_ambiguous
 
 # Completing on the text before the cursor (ignoring the rest of the word) is
 # handled by the expand-or-complete-prefix widget in 50-keybindings.zsh, not by
