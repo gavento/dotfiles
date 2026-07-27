@@ -12,7 +12,10 @@
 #     "scipy<2",
 # ]
 # [tool.uv]
-# exclude-newer = "2024-11-01T00:00:00Z"
+# # Rolling window instead of a frozen date: pick up fixes, but stay far
+# # enough behind that a same-day bad release cannot break the session.
+# # uv accepts "friendly" durations here -- days, not months.
+# exclude-newer = "30 days"
 # ///
 
 import os, sys, math, pickle, json, time, random, re, copy, shutil, subprocess, datetime, collections, itertools, functools, dataclasses
