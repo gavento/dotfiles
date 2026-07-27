@@ -51,10 +51,18 @@ dotfiles update              # show what upstream will overwrite, then fast-forw
 dotfiles add ~/.config/zsh/70-thing.zsh
 dotfiles commit -m "..."     # anything unrecognised falls through to yadm
 dotfiles class rich          # set this machine's tier
-dotfiles tools list          # pinned vs installed
+dotfiles tools list          # pinned vs installed vs system
 dotfiles tools install       # install/refresh pinned binaries
+dotfiles tools remove fzf    # drop a pinned binary, fall back to the system one
 dotfiles tools outdated      # check upstream for newer releases
 ```
+
+Pinned tools defer to the distro: each manifest row carries a minimum
+version (the oldest that has every feature this setup uses — e.g. `fzf
+--zsh` needs 0.48), and `tools install` skips a tool whose system copy
+meets it, so `apt`'s security updates keep applying. `--force` installs the
+pin anyway; `status` warns when a pinned copy shadows a sufficient system
+one.
 
 `status` is precise because `.gitignore` is an **allowlist**: `/*` ignores all
 of `$HOME`, then managed paths are re-included. So a new file appearing in

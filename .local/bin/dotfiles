@@ -56,6 +56,28 @@ cmd_status() {
             echo "$behind commit(s) waiting upstream. 'dotfiles update' to see and apply."
         fi
     fi
+
+    # Pinned tools that shadow a sufficient system copy (~/.local/bin comes
+    # first in PATH). Quiet in the normal states -- only pinned, or only
+    # system -- and on boxes where the manifest is not checked out.
+    if [[ -r "$MANIFEST" ]]; then
+        local arch name version min rowarch _u _s pairs notes=""
+        arch=$(uname -m)
+        while IFS=$'\t' read -r name version min rowarch _u _s pairs; do
+            [[ "$rowarch" == "$arch" && "$min" != "-" ]] || continue
+            pinned_present "$name" "$pairs" || continue
+            local syspath sysv
+            syspath=$(system_path "$name") || continue
+            sysv=$(system_version "$syspath")
+            [[ -n "$sysv" ]] && version_ge "$sysv" "$min" || continue
+            notes+="  $name: pinned $(installed_version "$name") shadows system $sysv ($syspath, >= $min)"$'\n'
+        done < <(manifest_rows)
+        if [[ -n "$notes" ]]; then
+            echo
+            echo "Pinned tools shadowing a sufficient system copy ('dotfiles tools remove <t>' to prefer it):"
+            printf '%s' "$notes"
+        fi
+    fi
 }
 
 # --------------------------------------------------------------------------
@@ -132,10 +154,64 @@ installed_version() {
     [[ -r "$STAMP_DIR/$name" ]] && cat "$STAMP_DIR/$name" || echo ""
 }
 
-install_one() {
-    local name="$1" version="$2" url="$3" want_sha="$4" pairs="$5"
+# The stamp records what install_one laid down; also require the files to
+# still exist, so a hand-removed binary reads as "not installed" rather than
+# blocking a reinstall forever.
+pinned_present() {
+    local name="$1" pairs="$2" pair
+    [[ -n "$(installed_version "$name")" ]] || return 1
+    while IFS= read -r pair; do
+        [[ -x "$HOME/${pair#*:}" ]] || return 1
+    done < <(tr ',' '\n' <<<"$pairs")
+}
 
-    if [[ "$(installed_version "$name")" == "$version" ]]; then
+version_ge() {  # version_ge HAVE MIN
+    [[ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]
+}
+
+# First PATH copy outside ~/.local/bin (where pinned installs land) -- i.e.
+# the binary that would run if the pinned one were removed.
+system_path() {
+    local p
+    while IFS= read -r p; do
+        [[ "$p" == "$HOME/.local/bin/"* ]] && continue
+        printf '%s\n' "$p"
+        return 0
+    done < <(type -ap "$1" 2>/dev/null)
+    return 1
+}
+
+# First x.y[.z] the binary reports. --version covers fzf and uv; the bare
+# `version` subcommand covers gitleaks. </dev/null so a flag-refusing tool
+# cannot sit there reading stdin.
+system_version() {
+    { "$1" --version </dev/null 2>/dev/null \
+        || "$1" version </dev/null 2>/dev/null; } \
+        | grep -Eom1 '[0-9]+\.[0-9]+(\.[0-9]+)*' | head -n1
+}
+
+install_one() {
+    local name="$1" version="$2" min="$3" url="$4" want_sha="$5" pairs="$6" force="${7:-0}"
+
+    # A system copy meeting the feature floor makes the pinned download
+    # unnecessary -- and the distro package keeps getting security updates.
+    if (( ! force )) && [[ "$min" != "-" ]]; then
+        local syspath sysv
+        if syspath=$(system_path "$name"); then
+            sysv=$(system_version "$syspath")
+            if [[ -n "$sysv" ]] && version_ge "$sysv" "$min"; then
+                if pinned_present "$name" "$pairs"; then
+                    echo "  $name: system $sysv ($syspath) suffices, but pinned $(installed_version "$name") shadows it"
+                    echo "      'dotfiles tools remove $name' to prefer the system copy"
+                else
+                    echo "  $name: system $sysv ($syspath) >= $min, skipping (--force installs pinned $version)"
+                fi
+                return 0
+            fi
+        fi
+    fi
+
+    if [[ "$(installed_version "$name")" == "$version" ]] && pinned_present "$name" "$pairs"; then
         echo "  $name $version already installed"
         return 0
     fi
@@ -181,17 +257,23 @@ cmd_tools() {
 
     case "$sub" in
         list)
-            printf '%-10s %-10s %-10s %s\n' TOOL PINNED INSTALLED ARCH
-            local name version rowarch _url _sha _pairs
-            while IFS=$'\t' read -r name version rowarch _url _sha _pairs; do
+            printf '%-10s %-10s %-10s %-10s %-8s %s\n' TOOL PINNED INSTALLED SYSTEM MIN ARCH
+            local name version min rowarch _url _sha pairs
+            while IFS=$'\t' read -r name version min rowarch _url _sha pairs; do
                 [[ "$rowarch" == "$arch" ]] || continue
-                local have; have=$(installed_version "$name"); : "${have:=-}"
-                printf '%-10s %-10s %-10s %s\n' "$name" "$version" "$have" "$rowarch"
+                local have sysv syspath
+                have=$(installed_version "$name")
+                [[ -n "$have" ]] && ! pinned_present "$name" "$pairs" && have="(gone)"
+                : "${have:=-}"
+                sysv=""
+                syspath=$(system_path "$name") && sysv=$(system_version "$syspath")
+                : "${sysv:=-}"
+                printf '%-10s %-10s %-10s %-10s %-8s %s\n' "$name" "$version" "$have" "$sysv" "$min" "$rowarch"
             done < <(manifest_rows)
             ;;
         outdated)
-            local name version rowarch url _sha _pairs latest repo
-            while IFS=$'\t' read -r name version rowarch url _sha _pairs; do
+            local name version min rowarch url _sha _pairs latest repo
+            while IFS=$'\t' read -r name version min rowarch url _sha _pairs; do
                 [[ "$rowarch" == "$arch" ]] || continue
                 # owner/repo straight from the release URL -- no separate
                 # map to forget when adding a tool.
@@ -206,9 +288,16 @@ cmd_tools() {
             done < <(manifest_rows)
             ;;
         install)
-            local want=("$@") name version rowarch url sha pairs found=0
+            local force=0 want=() a
+            for a in "$@"; do
+                case "$a" in
+                    -f|--force) force=1 ;;
+                    *) want+=("$a") ;;
+                esac
+            done
+            local name version min rowarch url sha pairs found=0
             echo "Installing tools ($arch):"
-            while IFS=$'\t' read -r name version rowarch url sha pairs; do
+            while IFS=$'\t' read -r name version min rowarch url sha pairs; do
                 [[ "$rowarch" == "$arch" ]] || continue
                 if (( ${#want[@]} )); then
                     local match=0 w
@@ -216,11 +305,29 @@ cmd_tools() {
                     (( match )) || continue
                 fi
                 found=1
-                install_one "$name" "$version" "$url" "$sha" "$pairs"
+                install_one "$name" "$version" "$min" "$url" "$sha" "$pairs" "$force"
             done < <(manifest_rows)
             (( found )) || echo "  nothing to do for $arch" >&2
             ;;
-        *) die "unknown tools subcommand: $sub (list|install|outdated)" ;;
+        remove)
+            (( $# )) || die "tools remove needs tool name(s)"
+            local t name version min rowarch _url _sha pairs
+            for t in "$@"; do
+                local hit=0
+                while IFS=$'\t' read -r name version min rowarch _url _sha pairs; do
+                    [[ "$name" == "$t" && "$rowarch" == "$arch" ]] || continue
+                    hit=1
+                    local pair dest
+                    while IFS= read -r pair; do
+                        dest="$HOME/${pair#*:}"
+                        [[ -e "$dest" ]] && rm -f -- "$dest" && echo "  removed $dest"
+                    done < <(tr ',' '\n' <<<"$pairs")
+                    rm -f -- "$STAMP_DIR/$name"
+                done < <(manifest_rows)
+                (( hit )) || echo "  $t: not in manifest for $arch" >&2
+            done
+            ;;
+        *) die "unknown tools subcommand: $sub (list|install|remove|outdated)" ;;
     esac
 }
 
@@ -233,8 +340,11 @@ Usage: dotfiles <command> [args]
   status              Modified files, NEW files in managed dirs, upstream drift
   update              Show what upstream changes, then fast-forward
   class [base|rich]   Show or set this machine's tier
-  tools list          Pinned vs installed versions
-  tools install [t..] Install/update pinned tools (all, or named ones)
+  tools list          Pinned vs installed vs system versions
+  tools install [t..] Install/update pinned tools (all, or named ones);
+                      skipped where a system copy meets the manifest's min
+                      version (--force overrides)
+  tools remove t..    Remove pinned tool(s), falling back to system copies
   tools outdated      Check upstream for newer releases
   help
 
