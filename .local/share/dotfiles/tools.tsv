@@ -16,8 +16,12 @@
 #                      Debian 13 ships 0.60.3, so its package qualifies
 #   uv        0.9.17   relative exclude-newer durations (the `i` launcher)
 #   gitleaks  8.19.0   the `stdin` scan command (pre_commit hook)
+#   lsd       0.23.1   every flag the listing aliases use, verified against
+#                      that binary; Debian 12 (0.23.1) and 13 (1.1.5) qualify
 # uv and gitleaks are not packaged by Debian; their floors guard copies
-# installed by other means (curl installer, brew, go install).
+# installed by other means (curl installer, brew, go install). eza (the
+# aliases' second-choice backend) is deliberately not pinned: lsd already
+# covers the role, so eza is used only when the distro provides it.
 #
 # Data, not code, and TAB-separated rather than YAML/TOML on purpose: this is
 # read by bash on machines that may have no python and no yq -- including the
@@ -32,3 +36,5 @@ uv	0.11.32	0.9.17	x86_64	https://github.com/astral-sh/uv/releases/download/0.11.
 uv	0.11.32	0.9.17	aarch64	https://github.com/astral-sh/uv/releases/download/0.11.32/uv-aarch64-unknown-linux-musl.tar.gz	d70cdae687feb6aad9a09fe8d686df8c8efaf69a1007fa581379a2025adc10a5	uv-aarch64-unknown-linux-musl/uv:.local/bin/uv,uv-aarch64-unknown-linux-musl/uvx:.local/bin/uvx
 gitleaks	8.30.1	8.19.0	x86_64	https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz	551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb	gitleaks:.local/bin/gitleaks
 gitleaks	8.30.1	8.19.0	aarch64	https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz	e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080	gitleaks:.local/bin/gitleaks
+lsd	1.2.0	0.23.1	x86_64	https://github.com/lsd-rs/lsd/releases/download/v1.2.0/lsd-v1.2.0-x86_64-unknown-linux-musl.tar.gz	77849da1210336534258551a581401ba19ae6b8d7b66a2a1feff148ad41e3814	lsd-v1.2.0-x86_64-unknown-linux-musl/lsd:.local/bin/lsd
+lsd	1.2.0	0.23.1	aarch64	https://github.com/lsd-rs/lsd/releases/download/v1.2.0/lsd-v1.2.0-aarch64-unknown-linux-musl.tar.gz	642ecb1a763b9f790a99c83a1445c117a6813ed4edb5d498d4420423c6353eb8	lsd-v1.2.0-aarch64-unknown-linux-musl/lsd:.local/bin/lsd

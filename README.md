@@ -5,7 +5,8 @@ Configs for zsh, tmux, git, ssh and vim, in two tiers:
 - **base** — anything with `zsh` on it. No plugins, no binaries, no plugin
   manager. Drops onto a strange server and works.
 - **rich** — laptop, devboxes, containers. Adds vendored zsh plugins and
-  pinned tools (fzf, uv, gitleaks).
+  pinned tools (fzf, uv, gitleaks, lsd); bootstrap installs those only for
+  this class.
 
 `$HOME` *is* the work tree, managed with a **vendored** `yadm`. That means
 files are live where they belong: no symlinks, no source directory, no apply
@@ -27,8 +28,8 @@ curl -fL .../bootstrap.sh | bash -s -- --system --class rich
 ```
 
 The script clones the repo, extracts just the machinery (`yadm`, `dotfiles`,
-`tools.tsv`), installs the pinned tools, and then checks out the rest of
-`$HOME`. That checkout **refuses to overwrite any pre-existing file**: git
+`tools.tsv`), checks out the rest of `$HOME`, and — for the rich class —
+installs the pinned tools (skipping any with a sufficient system copy). That checkout **refuses to overwrite any pre-existing file**: git
 names every path that is in the way and changes nothing. Move those aside —
 
 ```sh

@@ -8,8 +8,9 @@
 # anything inside it. Everything afterwards is `dotfiles`.
 #
 # Flow: clone the repo, extract just this repo's machinery (yadm, dotfiles,
-# tools.tsv), install the pinned tools, then check out the rest. That last
-# checkout NEVER overwrites a pre-existing file -- git refuses and names every
+# tools.tsv), check out the rest, then install the pinned tools (rich class
+# only, and skipping any tool with a sufficient system copy). That checkout
+# NEVER overwrites a pre-existing file -- git refuses and names every
 # conflicting path, you move those aside, and `dotfiles checkout` finishes the
 # job. A bootstrap that silently ate an existing ~/.zshrc or ~/.ssh/config
 # would be a far worse failure than an interrupted one.
@@ -41,7 +42,8 @@ Usage: bootstrap.sh [options]
 
   --system          Install base packages first (needs root or sudo)
   --class <name>    Set the machine class: base (default) or rich
-  --no-tools        Skip pinned tool installation (fzf, uv, gitleaks)
+  --no-tools        Skip pinned tool installation (rich class: fzf, uv,
+                    gitleaks, lsd; base skips them anyway)
   --url <git-url>   Override the dotfiles repository URL
   -h, --help
 EOF
@@ -205,8 +207,14 @@ main() {
 
     # Independent of the checkout above: dotfiles and tools.tsv are already in
     # place, and tools install into ~/.local/bin, which holds no user data.
+    # Only the rich tier gets binaries by default -- base stays pure zsh with
+    # nothing vendored. `dotfiles tools install` adds them by hand anywhere.
     if (( DO_TOOLS )); then
-        "$HOME/.local/bin/dotfiles" tools install || echo "bootstrap: tool install had problems (continuing)" >&2
+        if [[ "$("$HOME/.local/bin/dotfiles" class)" == rich ]]; then
+            "$HOME/.local/bin/dotfiles" tools install || echo "bootstrap: tool install had problems (continuing)" >&2
+        else
+            echo "Base class: skipping pinned tools ('dotfiles tools install' adds them)."
+        fi
     fi
 
     if [[ "${SHELL:-}" != *zsh ]] && command -v zsh >/dev/null 2>&1; then
