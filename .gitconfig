@@ -1,69 +1,101 @@
 [user]
-    name = Tomas Gavenciak
-    email = gavento@gmail.com
+	name = Tomas Gavenciak
+	email = gavento@gmail.com
+
+[init]
+	defaultBranch = main
+
+# ---------------------------------------------------------------------------
+# Integrity
+# ---------------------------------------------------------------------------
+# For $deity's sake, check that anything we're getting is complete and sane on
+# a regular basis.
+
+[transfer]
+	fsckobjects = true
+[fetch]
+	fsckobjects = true
+	prune = true
+[receive]
+	fsckObjects = true
+[fsck]
+	badTimezone = ignore
+
+# ---------------------------------------------------------------------------
+# Behaviour
+# ---------------------------------------------------------------------------
+
+[pull]
+	ff = only
+[push]
+	default = simple
+	autoSetupRemote = true      ; no more `--set-upstream` on a new branch
+[rebase]
+	autosquash = true
+[merge]
+	log = true
+	conflictStyle = zdiff3      ; show the common ancestor in conflict markers
+[rerere]
+	enabled = true              ; remember conflict resolutions and replay them
+[diff]
+	mnemonicprefix = true
+	algorithm = histogram       ; markedly better on moved / reindented code
+[branch]
+	sort = -committerdate       ; most recently used branches first
+[column]
+	ui = auto
+
+; No core.excludesFile: git already reads ~/.config/git/ignore by default.
+; The [submodule] recurse / push.recurseSubmodules pair is gone with the
+; submodule experiment that ended in 2024.
+
+# ---------------------------------------------------------------------------
+# Colour
+# ---------------------------------------------------------------------------
 
 [color]
-    branch = auto
-    diff = auto
-    status = auto
-
+	branch = auto
+	diff = auto
+	status = auto
 [color "branch"]
-    current = red reverse
-    local = blue
-    remote = green
-
+	current = yellow
+	local = blue
+	remote = green
 [color "diff"]
-    meta = yellow
-    frag = magenta
-    old = red reverse
-    new = green reverse
-    plain = white
-
+	meta = yellow
+	frag = magenta
+	old = red
+	new = green
+	plain = white
 [color "status"]
-    added = yellow
-    changed = green
-    untracked = cyan
+	added = yellow
+	changed = green
+	untracked = cyan
 
-[diff]
-    mnemonicprefix = true
+# ---------------------------------------------------------------------------
+# Aliases
+# ---------------------------------------------------------------------------
 
 [alias]
-    co = checkout
-    st = status
-    #ll = log --all --decorate --graph --pretty=format:'%C(auto)%h%Creset %C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)[%an]%Creset' --abbrev-commit --date=relative
-    ll = log --branches --decorate --graph --pretty=format:'%C(auto)%h%Creset %C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)[%an]%Creset' --abbrev-commit --date=relative
-    wd = diff --color-words
-    ci = commit
-    br = branch
-    l = log --oneline --graph --all --decorate
+	co = checkout
+	st = status
+	ci = commit
+	br = branch
+	wd = diff --color-words
+	; `l` is the terse graph; `ll` adds relative date and author.
+	l = log --oneline --graph --decorate --all
+	ll = log --branches --decorate --graph --abbrev-commit --date=relative --pretty=format:'%C(auto)%h%Creset %C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)[%an]%Creset'
 
-[merge]
-    log = true
-
-[push]
-    default = simple
-	recurseSubmodules = no
-
-[rebase]
-    autosquash = true
-
-# for $deity's sake, check that anything we're getting is complete and sane on a regular basis 
-[transfer]
-    fsckobjects = true
-[fetch]
-    fsckobjects = true
-[receive]
-    fsckObjects = true
-[fsck]
-    badTimezone = ignore
-[pull]
-    ff = only
-[init]
-    defaultBranch = main
 [filter "lfs"]
-    clean = git-lfs clean -- %f
-    smudge = git-lfs smudge -- %f
-    process = git-lfs filter-process
-    required = true
-[submodule]
-	recurse = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+
+# ---------------------------------------------------------------------------
+# Per-machine escape hatch (gitignored). A missing include path is ignored
+# silently, so this costs nothing where the file does not exist.
+# ---------------------------------------------------------------------------
+
+[include]
+	path = ~/.config/git/local

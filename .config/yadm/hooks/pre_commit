@@ -1,10 +1,37 @@
 #!/bin/bash
-set -e -u -o pipefail
+# Scan staged files for secrets before they land in the repo.
+#
+# Backend preference: the gitleaks binary (installed by `dotfiles tools`), then
+# docker as a fallback. If neither exists we warn and let the commit through --
+# previously this ran under `set -e` with a bare `docker run`, so on any box
+# without docker every single commit failed.
+set -u -o pipefail
 
-# Check staged files for secrets
-for f in `yadm diff --name-only --cached`; do
-  if [[ -e "$f" ]] then
-    echo Checking "$f" for secrets ...
-    docker run -i ghcr.io/gitleaks/gitleaks:latest stdin -l error --no-banner < $f
-  fi
-done
+# yadm runs hooks from whatever directory the command was invoked in, while
+# `yadm diff --name-only` prints paths relative to the work tree -- cd there,
+# or every path test below silently fails and nothing gets scanned.
+cd "${YADM_HOOK_WORK:-$HOME}" || exit 1
+
+scan_binary() { gitleaks stdin -l error --no-banner; }
+scan_docker()  { docker run -i --rm ghcr.io/gitleaks/gitleaks:latest stdin -l error --no-banner; }
+
+if command -v gitleaks >/dev/null 2>&1; then
+    scan=scan_binary
+elif command -v docker >/dev/null 2>&1; then
+    scan=scan_docker
+else
+    echo "pre_commit: no gitleaks binary and no docker; skipping secret scan." >&2
+    echo "            install one with: dotfiles tools install gitleaks" >&2
+    exit 0
+fi
+
+status=0
+while IFS= read -r f; do
+    [[ -f "$f" ]] || continue
+    if ! "$scan" < "$f"; then
+        echo "pre_commit: possible secret in $f" >&2
+        status=1
+    fi
+done < <(yadm diff --name-only --cached)
+
+exit $status

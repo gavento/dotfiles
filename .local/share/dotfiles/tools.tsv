@@ -1,0 +1,22 @@
+# Pinned, hash-verified, rootless tool installs.  TAB-separated.
+#
+# Columns:
+#   name  version  arch  url  sha256  src:dest[,src:dest...]
+#
+# `arch` matches `uname -m`. `src` is a path inside the archive; `dest` is
+# relative to $HOME.  A tool with no row for the running architecture is
+# skipped with a warning rather than failing.
+#
+# Data, not code, and TAB-separated rather than YAML/TOML on purpose: this is
+# read by bash on machines that may have no python and no yq -- including the
+# machine that is about to install uv.
+#
+# To refresh: bump the version, download the archive, `sha256sum` it, paste.
+# `dotfiles tools outdated` prints the current upstream releases.
+
+fzf	0.74.1	x86_64	https://github.com/junegunn/fzf/releases/download/v0.74.1/fzf-0.74.1-linux_amd64.tar.gz	df53438be5f51e151bb4044d78fda72bdfe209e3ecd2baecae48e8dea370c81b	fzf:.local/bin/fzf
+fzf	0.74.1	aarch64	https://github.com/junegunn/fzf/releases/download/v0.74.1/fzf-0.74.1-linux_arm64.tar.gz	f22204dd1a091d43e102268d062fd53b47133c8d8581671ee5eb225b75e31183	fzf:.local/bin/fzf
+uv	0.11.32	x86_64	https://github.com/astral-sh/uv/releases/download/0.11.32/uv-x86_64-unknown-linux-musl.tar.gz	1fd052f196108d87e61fc3d98fe06b4ec758c9a1eb1466a6fd1a436fe45885f2	uv-x86_64-unknown-linux-musl/uv:.local/bin/uv,uv-x86_64-unknown-linux-musl/uvx:.local/bin/uvx
+uv	0.11.32	aarch64	https://github.com/astral-sh/uv/releases/download/0.11.32/uv-aarch64-unknown-linux-musl.tar.gz	d70cdae687feb6aad9a09fe8d686df8c8efaf69a1007fa581379a2025adc10a5	uv-aarch64-unknown-linux-musl/uv:.local/bin/uv,uv-aarch64-unknown-linux-musl/uvx:.local/bin/uvx
+gitleaks	8.30.1	x86_64	https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz	551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb	gitleaks:.local/bin/gitleaks
+gitleaks	8.30.1	aarch64	https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz	e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080	gitleaks:.local/bin/gitleaks

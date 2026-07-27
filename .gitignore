@@ -1,8 +1,48 @@
-/proj
-/Download
-/Games
-/Desktop
-/priv
-/.priv
-!/.ssh/config
+# Allowlist, not a denylist: $HOME is the work tree, so ignore everything and
+# then re-include exactly what is managed.
+#
+# The point is `dotfiles status`. With a denylist, an untracked-file report in
+# $HOME is drowned in noise (Downloads, dev checkouts, yadm's own repo.git) and
+# therefore useless. With this, `status -uall` reports a NEW file appearing in
+# a managed directory -- e.g. a fragment dropped into ~/.config/zsh/ -- and
+# stays quiet about everything else.
+#
+# Re-including a path requires un-ignoring every parent directory first, hence
+# the descend/exclude pairs below.
+
+/*
+
+!/.gitignore
+!/.zshrc
+!/.zshenv
+!/.tmux.conf
+!/.vimrc
+!/.gitconfig
+!/README.md
+!/bootstrap.sh
+
+!/.ssh/
 /.ssh/*
+!/.ssh/config
+
+!/.config/
+/.config/*
+!/.config/zsh/
+!/.config/yadm/
+
+!/.local/
+/.local/*
+!/.local/bin/
+!/.local/share/
+/.local/share/*
+!/.local/share/man/
+!/.local/share/zsh/
+!/.local/share/dotfiles/
+
+# Machine-local escape hatches, never tracked.
+/.config/zsh/local.zsh
+/.config/dotfiles/
+/.config/tmux/
+/.config/git/local
+/.ssh/config.d/
+/.tmux_local.conf

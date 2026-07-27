@@ -1,0 +1,32 @@
+#!/bin/sh
+# Short label for a tmux window, used by automatic-rename-format.
+#
+#   in a git repo   ->  reponame:branch     (a trailing + means uncommitted work)
+#   in $HOME        ->  ~
+#   anywhere else   ->  directory basename
+#
+# Runs once per window per status-interval, so it stays cheap: `git diff
+# --quiet` short-circuits on the first difference rather than building a full
+# status listing.
+
+dir=${1:-$PWD}
+cd "$dir" 2>/dev/null || { printf '?'; exit 0; }
+
+if root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$root" ]; then
+    branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) \
+        || branch=$(git rev-parse --short HEAD 2>/dev/null) \
+        || branch='?'
+    if git diff --quiet --ignore-submodules HEAD 2>/dev/null; then
+        dirty=''
+    else
+        dirty='+'
+    fi
+    printf '%s:%s%s' "${root##*/}" "$branch" "$dirty"
+    exit 0
+fi
+
+case "$dir" in
+    "$HOME") printf '~' ;;
+    /)       printf '/' ;;
+    *)       printf '%s' "${dir##*/}" ;;
+esac

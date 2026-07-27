@@ -1,189 +1,255 @@
 #!/bin/bash
-set -e -u -o pipefail
+# dotfiles - day-to-day driver for the yadm-managed $HOME repo.
+#
+# Anything not listed below is passed straight through to yadm, so
+# `dotfiles add`, `dotfiles commit`, `dotfiles log` all work as expected.
+#
+# First-time setup of a machine is bootstrap.sh, not this script.
 
-DOTFILE_URL=https://github.com/gavento/dotfiles
+set -u -o pipefail
 
-install_from_archive() {
-    local URL="$1"
-    local VERSION="$2"
-    local ARCHIVE_HASH="$3"
-    shift 3
-    
-    # First pair is used for version checking
-    local CHECK_SRC="$1"
-    local CHECK_TGT="$2"
-    
-    if ! [[ -f "$HOME/$CHECK_TGT" ]] || ! "$HOME/$CHECK_TGT" --version | grep -q "\<$VERSION\>"; then
-        if ! [[ -f "$HOME/$CHECK_TGT" ]]; then
-            echo "Installing $CHECK_TGT $VERSION ..."
-        else
-            echo "Updating $CHECK_TGT to $VERSION (from $("$HOME/$CHECK_TGT" --version)) ..."
-        fi
-        local tmpdir=$(mktemp -d)
-        local archive="$tmpdir/archive.tar.gz"
-        
-        # Download and verify archive
-        curl -fL "$URL" -o "$archive"
-        echo "$ARCHIVE_HASH $archive" | sha256sum -c --quiet || \
-            ( echo "Wrong archive hash in $tmpdir!"; false )
-            
-        # Process all source/target pairs
-        while [[ $# -ge 2 ]]; do
-            local src="$1"
-            local tgt="$2"
-            shift 2
-            echo "  Extracting $src to $HOME/$tgt ..."
-            
-            mkdir -p "$(dirname "$HOME/$tgt")"
-            tar -xzf "$archive" -C "$HOME" --transform="s|$src|$tgt|" "$src"
-        done
-        
-        rm -rf "$tmpdir"
+YADM="${YADM:-$HOME/.local/bin/yadm}"
+CLASS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/class"
+MANIFEST="$HOME/.local/share/dotfiles/tools.tsv"
+STAMP_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/tools"
+
+die() { echo "dotfiles: $*" >&2; exit 1; }
+
+[[ -x "$YADM" ]] || die "yadm not found at $YADM (run bootstrap.sh?)"
+
+# --------------------------------------------------------------------------
+# status - what changed here, and what is waiting upstream
+# --------------------------------------------------------------------------
+
+cmd_status() {
+    local modified untracked
+
+    # -uall so new files are named individually; porcelain v1 otherwise
+    # collapses them into a bare directory entry like "?? .local/".
+    modified=$("$YADM" status --porcelain -uall | grep -v '^??' || true)
+    untracked=$("$YADM" status --porcelain -uall | grep '^??' || true)
+
+    if [[ -n "$modified" ]]; then
+        echo "Modified:"
+        sed 's/^/  /' <<<"$modified"
     fi
-}
+    if [[ -n "$untracked" ]]; then
+        echo "New files in managed directories:"
+        sed 's/^..//; s/^/  /' <<<"$untracked"
+    fi
+    [[ -z "$modified$untracked" ]] && echo "Working tree clean."
 
-install_fzf() {
-    local VERSION="0.56.0"
-    install_from_archive \
-        "https://github.com/junegunn/fzf/releases/download/v${VERSION}/fzf-${VERSION}-linux_amd64.tar.gz" \
-        "$VERSION" \
-        "7afad5dcc3e3a7cbaef577ec02c4dd90280e283bc16da99809498f75a5f18080" \
-        "fzf" ".local/bin/fzf"
-}
-
-install_uv() {
-    local VERSION="0.5.1"
-    install_from_archive \
-        "https://github.com/astral-sh/uv/releases/download/${VERSION}/uv-x86_64-unknown-linux-musl.tar.gz" \
-        "$VERSION" \
-        "c446a98876ed86c810a80621a43e2378c35f39794020f8de99da72b003b17dd5" \
-        "uv-x86_64-unknown-linux-musl/uv" ".local/bin/uv" \
-        "uv-x86_64-unknown-linux-musl/uvx" ".local/bin/uvx"
-}
-
-install_yadm() {
-    local VERSION="3.3.0"
-    install_from_archive \
-        "https://github.com/yadm-dev/yadm/archive/refs/tags/${VERSION}.tar.gz" \
-        "$VERSION" \
-        "a977836ee874fece3d69b5a8f7436e6ce4e6bf8d2520f8517c128281cc6b101d" \
-        "yadm-${VERSION}/yadm" ".local/bin/yadm" \
-        "yadm-${VERSION}/yadm.1" ".local/share/man/man1/yadm.1" \
-        "yadm-${VERSION}/completion/zsh/_yadm" ".local/share/zsh/functions/_yadm"
-}
-
-install_default_commands_local() {
-    install_fzf
-    install_uv
-    install_yadm
-}
-
-install_commands_system() {
-    local packages="$@"
-    local missing_packages=""
-
-    # Check what's missing
-    for package in $packages; do
-        if ! command -v "$package" > /dev/null; then
-            missing_packages="$missing_packages $package"
+    # Upstream drift, without touching the working tree.
+    if "$YADM" remote get-url origin >/dev/null 2>&1; then
+        # Rate-limit the network round-trip: skip the fetch if the last one
+        # is younger than 10 minutes.
+        local git_dir
+        git_dir=$("$YADM" rev-parse --git-dir 2>/dev/null)
+        if [[ -n "$git_dir" ]] && { [[ ! -e "$git_dir/FETCH_HEAD" ]] ||
+             [[ -n $(find "$git_dir/FETCH_HEAD" -mmin +10 2>/dev/null) ]]; }; then
+            "$YADM" fetch --quiet origin 2>/dev/null || true
         fi
-    done
-
-    # Install if anything is missing
-    if [ -n "$missing_packages" ]; then
-        # Check for sudo if not root
-        local SUDO=""
-        if [ "$EUID" -ne 0 ]; then
-            if ! command -v sudo > /dev/null; then
-                echo "Neither root access nor sudo available"
-                exit 1
-            fi
-            SUDO="sudo"
-        fi
-        # Determine package manager
-        if command -v apt-get > /dev/null; then
-            $SUDO apt-get update
-            $SUDO apt-get install -y $missing_packages
-        elif command -v pacman > /dev/null; then
-            $SUDO pacman -Sy --noconfirm $missing_packages
-        elif command -v dnf > /dev/null; then
-            $SUDO dnf install -y $missing_packages
-        elif command -v yum > /dev/null; then
-            $SUDO yum install -y $missing_packages
-        else
-            echo "No supported package manager found (apt, pacman, dnf, or yum)"
-            exit 1
+        local behind
+        behind=$("$YADM" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
+        if [[ "$behind" != 0 ]]; then
+            echo
+            echo "$behind commit(s) waiting upstream. 'dotfiles update' to see and apply."
         fi
     fi
 }
 
-install_default_commands_system() {
-    install_commands_system zsh sudo curl git tmux htop nano vim mc
-}
+# --------------------------------------------------------------------------
+# update - show exactly what upstream will change, then fast-forward
+# --------------------------------------------------------------------------
 
-bootstrap() {
-    YADM=$HOME/.local/bin/yadm
-    YADM_REPO=$HOME/.local/share/yadm/repo.git
-    if [[ -d "$YADM_REPO" ]]; then
-        echo "YADM repository already exists at $YADM_REPO. Use yadm to manage it."
-        exit 1
-    else
-        echo "Cloning dotfiles repository $DOTFILE_URL via YADM ..."
-        cd $HOME
-        $YADM clone $DOTFILE_URL
-        $YADM checkout .
+cmd_update() {
+    "$YADM" remote get-url origin >/dev/null 2>&1 || die "no origin remote"
+    "$YADM" fetch origin || die "fetch failed"
+
+    local behind
+    behind=$("$YADM" rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
+    if [[ "$behind" == 0 ]]; then
+        echo "Already up to date."
+        return 0
     fi
+
+    echo "Incoming ($behind commit(s)):"
+    "$YADM" log --oneline HEAD..@{upstream} | sed 's/^/  /'
+    echo
+    echo "Files this will overwrite:"
+    "$YADM" diff --stat HEAD..@{upstream} | sed 's/^/  /'
+
+    # A dirty tree is the case worth being careful about: merge would refuse
+    # anyway, but say so plainly instead of showing a git error.
+    if [[ -n "$("$YADM" status --porcelain)" ]]; then
+        echo
+        echo "Local modifications present; commit or stash them first:" >&2
+        "$YADM" status --porcelain | sed 's/^/  /' >&2
+        return 1
+    fi
+
+    echo
+    "$YADM" merge --ff-only @{upstream} || die "fast-forward failed"
+    "$YADM" alt   # re-materialise any ##class.* alternates
+    echo "Updated."
 }
 
-show_help() {
-    echo "Usage: $0 <command>"
-    echo "Commands:"
-    echo "  install-fzf       Install or update fzf tool locally"
-    echo "  install-uv        Install or update uv tool locally"
-    echo "  install-yadm      Install or update yadm tool locally"
-    echo "  install-local     Install or update all local tools (above)"
-    echo "  bootstrap         Install or update all local tools; then install dotfiles (if not present already)"
-    echo "  install-system    Install default packages via system packager (needs sudo or root)"
-    echo "  bootstrap-system  Install default packages via system packager; then do 'bootstrap'"
-    echo "  help              Show this help message"
+# --------------------------------------------------------------------------
+# class - which tier this machine is
+# --------------------------------------------------------------------------
+
+cmd_class() {
+    if [[ $# -eq 0 ]]; then
+        if [[ -r "$CLASS_FILE" ]]; then cat "$CLASS_FILE"; else echo "base"; fi
+        return 0
+    fi
+    local new="$1"
+    case "$new" in
+        base|rich) ;;
+        *) die "class must be 'base' or 'rich'" ;;
+    esac
+
+    # Two consumers, kept in step by this one command: yadm's alternates read
+    # local.class, while tmux/zsh gate themselves on the marker file.
+    mkdir -p "$(dirname "$CLASS_FILE")"
+    printf '%s\n' "$new" > "$CLASS_FILE"
+    "$YADM" config local.class "$new"
+    "$YADM" alt
+    echo "class = $new"
 }
 
-if [[ $# -eq 0 ]]; then
-    show_help
-    exit 1
-fi
+# --------------------------------------------------------------------------
+# tools - pinned, hash-verified, rootless binary installs
+# --------------------------------------------------------------------------
 
-case "$1" in
-    install-fzf)
-        install_fzf
-        ;;
-    install-uv)
-        install_uv
-        ;;
-    install-yadm)
-        install_yadm
-        ;;
-    install-local)
-        install_default_commands_local
-        ;;
-    bootstrap) 
-        install_default_commands_local
-        bootstrap
-        ;;
-    install-system)
-        install_default_commands_system
-        ;;
-    bootstrap-system)
-        install_default_commands_system
-        install_default_commands_local
-        bootstrap
-        ;;    
-    help)
-        show_help
-        ;;
-    *)
-        echo "Unknown command: $1"
-        show_help
-        exit 1
-        ;;
+manifest_rows() {
+    [[ -r "$MANIFEST" ]] || die "manifest not found: $MANIFEST"
+    grep -v '^[[:space:]]*#' "$MANIFEST" | grep -v '^[[:space:]]*$'
+}
+
+installed_version() {
+    local name="$1"
+    [[ -r "$STAMP_DIR/$name" ]] && cat "$STAMP_DIR/$name" || echo ""
+}
+
+install_one() {
+    local name="$1" version="$2" url="$3" want_sha="$4" pairs="$5"
+
+    if [[ "$(installed_version "$name")" == "$version" ]]; then
+        echo "  $name $version already installed"
+        return 0
+    fi
+
+    local tmp archive got_sha
+    tmp=$(mktemp -d) || return 1
+    archive="$tmp/archive.tar.gz"
+
+    echo "  $name -> $version"
+    curl -fL --progress-bar "$url" -o "$archive" || { rm -rf "$tmp"; die "download failed: $url"; }
+
+    got_sha=$(sha256sum "$archive" | cut -d' ' -f1)
+    if [[ "$got_sha" != "$want_sha" ]]; then
+        rm -rf "$tmp"
+        die "sha256 mismatch for $name
+       expected $want_sha
+       got      $got_sha"
+    fi
+
+    tar -xzf "$archive" -C "$tmp" || { rm -rf "$tmp"; die "extract failed: $name"; }
+
+    local pair src dest
+    while IFS= read -r pair; do
+        src="${pair%%:*}"; dest="${pair#*:}"
+        [[ -e "$tmp/$src" ]] || { rm -rf "$tmp"; die "$src not in archive for $name"; }
+        install -Dm755 "$tmp/$src" "$HOME/$dest" || { rm -rf "$tmp"; die "install failed: $dest"; }
+        echo "      $dest"
+    done < <(tr ',' '\n' <<<"$pairs")
+
+    # Record the version rather than exec'ing the binary to discover it: the
+    # old check ran `$tool --version | grep`, which is both fragile (yadm
+    # prints three lines, one of which is bash's version) and a needless
+    # execution of a just-downloaded binary.
+    mkdir -p "$STAMP_DIR"
+    printf '%s\n' "$version" > "$STAMP_DIR/$name"
+
+    rm -rf "$tmp"
+}
+
+cmd_tools() {
+    local sub="${1:-install}"; shift || true
+    local arch; arch=$(uname -m)
+
+    case "$sub" in
+        list)
+            printf '%-10s %-10s %-10s %s\n' TOOL PINNED INSTALLED ARCH
+            local name version rowarch _url _sha _pairs
+            while IFS=$'\t' read -r name version rowarch _url _sha _pairs; do
+                [[ "$rowarch" == "$arch" ]] || continue
+                local have; have=$(installed_version "$name"); : "${have:=-}"
+                printf '%-10s %-10s %-10s %s\n' "$name" "$version" "$have" "$rowarch"
+            done < <(manifest_rows)
+            ;;
+        outdated)
+            local name version rowarch url _sha _pairs latest repo
+            while IFS=$'\t' read -r name version rowarch url _sha _pairs; do
+                [[ "$rowarch" == "$arch" ]] || continue
+                # owner/repo straight from the release URL -- no separate
+                # map to forget when adding a tool.
+                repo=${url#https://github.com/}
+                repo=${repo%%/releases/*}
+                [[ "$repo" != "$url" && "$repo" == */* ]] || continue
+                latest=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
+                         | grep -m1 '"tag_name"' | cut -d'"' -f4 | sed 's/^v//')
+                if [[ -n "$latest" && "$latest" != "$version" ]]; then
+                    printf '  %-10s pinned %-10s upstream %s\n' "$name" "$version" "$latest"
+                fi
+            done < <(manifest_rows)
+            ;;
+        install)
+            local want=("$@") name version rowarch url sha pairs found=0
+            echo "Installing tools ($arch):"
+            while IFS=$'\t' read -r name version rowarch url sha pairs; do
+                [[ "$rowarch" == "$arch" ]] || continue
+                if (( ${#want[@]} )); then
+                    local match=0 w
+                    for w in "${want[@]}"; do [[ "$w" == "$name" ]] && match=1; done
+                    (( match )) || continue
+                fi
+                found=1
+                install_one "$name" "$version" "$url" "$sha" "$pairs"
+            done < <(manifest_rows)
+            (( found )) || echo "  nothing to do for $arch" >&2
+            ;;
+        *) die "unknown tools subcommand: $sub (list|install|outdated)" ;;
+    esac
+}
+
+# --------------------------------------------------------------------------
+
+usage() {
+    cat <<'EOF'
+Usage: dotfiles <command> [args]
+
+  status              Modified files, NEW files in managed dirs, upstream drift
+  update              Show what upstream changes, then fast-forward
+  class [base|rich]   Show or set this machine's tier
+  tools list          Pinned vs installed versions
+  tools install [t..] Install/update pinned tools (all, or named ones)
+  tools outdated      Check upstream for newer releases
+  help
+
+Anything else is passed to yadm:
+  dotfiles add ~/.config/zsh/70-new.zsh
+  dotfiles commit -m "add fragment"
+  dotfiles diff
+EOF
+}
+
+case "${1:-help}" in
+    status) shift; cmd_status "$@" ;;
+    update) shift; cmd_update "$@" ;;
+    class)  shift; cmd_class  "$@" ;;
+    tools)  shift; cmd_tools  "$@" ;;
+    help|-h|--help) usage ;;
+    *)      exec "$YADM" "$@" ;;
 esac

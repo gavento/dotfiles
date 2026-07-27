@@ -1,1 +1,5 @@
-
+[yadm]
+	# Class alternates (file##class.rich) are materialised by COPYING, not
+	# symlinking. `dotfiles class <name>` sets local.class and keeps
+	# ~/.config/dotfiles/class in step for the configs that gate themselves.
+	alt-copy = true
