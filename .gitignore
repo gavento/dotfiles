@@ -32,12 +32,36 @@
 
 !/.local/
 /.local/*
+
+# ~/.local/bin and ~/.local/share are shared with every rootless installer on
+# the box -- pip/uv/npm drop binaries, completions and man pages there. So
+# these two are the one place the allowlist goes file by file instead of
+# directory by directory: otherwise `dotfiles status` reports every ansible
+# entry point and __pycache__ that pip ever wrote, and `update` refuses to run
+# while they sit there. A new script of your own needs a line here; that is
+# the price of not hearing about other people's.
 !/.local/bin/
+/.local/bin/*
+!/.local/bin/yadm
+!/.local/bin/dotfiles
+!/.local/bin/tmux-window-label
+!/.local/bin/jsctl
+!/.local/bin/i
+!/.local/bin/ipython-session.py
+
 !/.local/share/
 /.local/share/*
-!/.local/share/man/
-!/.local/share/zsh/
 !/.local/share/dotfiles/
+!/.local/share/man/
+/.local/share/man/*
+!/.local/share/man/man1/
+/.local/share/man/man1/*
+!/.local/share/man/man1/yadm.1
+!/.local/share/zsh/
+/.local/share/zsh/*
+!/.local/share/zsh/functions/
+/.local/share/zsh/functions/*
+!/.local/share/zsh/functions/_yadm
 
 # Machine-local escape hatches, never tracked.
 /.config/zsh/local.zsh

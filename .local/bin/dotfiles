@@ -103,10 +103,16 @@ cmd_update() {
 
     # A dirty tree is the case worth being careful about: merge would refuse
     # anyway, but say so plainly instead of showing a git error.
-    if [[ -n "$("$YADM" status --porcelain)" ]]; then
+    #
+    # -uno: only *tracked* modifications can stop a fast-forward. Untracked
+    # files are not the merge's business unless it needs to write over one,
+    # and git catches exactly that case itself, by name -- refusing the whole
+    # update because some tool left a file in a managed directory would be a
+    # guard that fires on the wrong thing.
+    if [[ -n "$("$YADM" status --porcelain -uno)" ]]; then
         echo
         echo "Local modifications present; commit or stash them first:" >&2
-        "$YADM" status --porcelain | sed 's/^/  /' >&2
+        "$YADM" status --porcelain -uno | sed 's/^/  /' >&2
         return 1
     fi
 
