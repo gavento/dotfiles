@@ -1,15 +1,48 @@
 #!/bin/sh
 # Short label for a tmux window, used by automatic-rename-format.
 #
-#   in a git repo   ->  reponame:branch     (a trailing + means uncommitted work)
-#   in $HOME        ->  ~
-#   anywhere else   ->  directory basename
+#   pane running claude ->  the topic Claude Code publishes as its pane title
+#   in a git repo       ->  reponame:branch  (a trailing + means uncommitted work)
+#   in $HOME            ->  ~
+#   anywhere else       ->  directory basename
 #
 # Runs once per window per status-interval, so it stays cheap: `git diff
 # --quiet` short-circuits on the first difference rather than building a full
 # status listing.
+#
+# Usage: tmux-window-label <dir> [pane-id]
+# The title is looked up here rather than interpolated into the argument list
+# by tmux, so a topic containing a quote cannot break the command line tmux
+# builds for automatic-rename-format.
 
 dir=${1:-$PWD}
+pane=${2:-}
+
+# Claude Code sets its pane title to what the session is about ("* Fix the
+# parser"), which beats a path when several windows sit in the same repo.
+# Only trusted while claude is the foreground command of that pane.
+if [ -n "$pane" ]; then
+    meta=$(tmux display-message -p -t "$pane" \
+           '#{pane_current_command}|#{pane_title}' 2>/dev/null) || meta=''
+    case "$meta" in
+        claude\|*)
+            title=${meta#*|}
+            # Drop a leading spinner glyph: it animates, and a window name
+            # that changes every frame is unreadable. A title starting with
+            # an ordinary character is kept whole.
+            case "$title" in
+                [A-Za-z0-9]*) topic=$title ;;
+                *)            topic=${title#* } ;;
+            esac
+            # Until the first topic is set, the title is still the hostname.
+            if [ -n "$topic" ] && [ "$topic" != "$(uname -n)" ]; then
+                printf '%.24s' "$topic"
+                exit 0
+            fi
+            ;;
+    esac
+fi
+
 cd "$dir" 2>/dev/null || { printf '?'; exit 0; }
 
 if root=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$root" ]; then

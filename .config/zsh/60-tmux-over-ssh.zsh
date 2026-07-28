@@ -41,3 +41,14 @@ if [[ -z "$TMUX" && -n "$SSH_CONNECTION" ]] && (( $+commands[tmux] )); then
     exec tmux attach-session -t "$_tmux_ses" \; \
          set-option -t "$_tmux_ses" destroy-unattached on
 fi
+
+# Give this window its label back. tmux stops renaming a window the moment
+# something names it explicitly -- `new-window -n shell` from container
+# tooling is enough -- and the window then keeps that name forever, which is
+# why a whole status bar can read "1:shell 2:shell". The .tmux.conf hook
+# covers windows created after the config loads; this covers the one we are
+# starting in. Rename a window by hand and it stays renamed until a new shell
+# starts there.
+if [[ -n "$TMUX" ]] && (( $+commands[tmux] )); then
+    tmux set-window-option automatic-rename on 2>/dev/null
+fi

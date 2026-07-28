@@ -29,8 +29,9 @@ curl -fL .../bootstrap.sh | bash -s -- --system --class rich
 
 The script clones the repo, extracts just the machinery (`yadm`, `dotfiles`,
 `tools.tsv`), checks out the rest of `$HOME`, and — for the rich class —
-installs the pinned tools (skipping any with a sufficient system copy). That checkout **refuses to overwrite any pre-existing file**: git
-names every path that is in the way and changes nothing. Move those aside —
+installs the pinned tools (skipping any with a sufficient system copy). That
+checkout **refuses to overwrite any pre-existing file**: git names every path
+that is in the way and changes nothing. Move those aside —
 
 ```sh
 mv ~/.zshrc ~/.zshrc.pre-dotfiles
@@ -79,7 +80,8 @@ of `$HOME`, then managed paths are re-included. So a new file appearing in
   rich/70-plugins  rich/90-syntax-highlighting          rich tier only
   plugins/                                              vendored, plain `source`
   local.zsh                                             gitignored
-.tmux.conf                 per-window repo:branch labels in the status bar
+.tmux.conf                 per-window labels in the status bar (Claude Code
+                           topic, else repo:branch)
 .gitconfig .ssh/config .vimrc
 .local/bin/
   yadm                     vendored 3.5.0

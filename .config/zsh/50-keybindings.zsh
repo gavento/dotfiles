@@ -31,9 +31,21 @@ bindkey '^I' expand-or-complete-prefix
 
 # Up/Down search history for entries starting with what is already typed,
 # leaving the cursor at the end of the line.
-autoload -Uz history-search-end
-zle -N history-beginning-search-backward-end history-search-end
-zle -N history-beginning-search-forward-end  history-search-end
-for _k in '^[[A' '^[OA'; do bindkey "$_k" history-beginning-search-backward-end; done
-for _k in '^[[B' '^[OB'; do bindkey "$_k" history-beginning-search-forward-end;  done
+#
+# These, and not the history-search-end pair the zsh manual suggests: that one
+# derives the widget to call from its own name (`zle .${WIDGET%-end}`) and
+# recognises a repeat by pattern-matching $LASTWIDGET. zsh-autosuggestions
+# wraps every widget and re-registers the original under a generated name, so
+# in the rich class both assumptions fail -- the search restarted from the
+# whole recalled line instead of the typed prefix, which is why a third Up
+# stuck, Down never came back to what you were typing, and a plain history
+# walk with an empty prefix jumped around. These widgets name the builtin they
+# call outright and compare $LASTWIDGET against the value they saved, so the
+# wrapper is invisible to them. They also step through a multi-line buffer
+# before leaving it.
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+for _k in '^[[A' '^[OA'; do bindkey "$_k" up-line-or-beginning-search;   done
+for _k in '^[[B' '^[OB'; do bindkey "$_k" down-line-or-beginning-search; done
 unset _k
